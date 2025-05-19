@@ -9,6 +9,13 @@ const natashaTotal = document.getElementById('totalForNatasha');
 
 processBtn.addEventListener('click', async () => {
     const file = fileInput.files[0];
+
+    let currentFileName = '';
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (file) currentFileName = file.name;
+    });
+    
     if (!file) return alert('Оберіть PDF-файл');
 
     const from = parseInt(fromInput.value) - 1 || 0;
@@ -123,7 +130,7 @@ processBtn.addEventListener('click', async () => {
     /////////////////////////////////////////////////
     const title = document.createElement('h5');
     title.className = 'fw-bold mt-3';
-    title.textContent = `Файл: ${file.name}`;
+    title.textContent = `Файл: ${currentFileName}`;
     
     container.appendChild(title);
     container.appendChild(table);
