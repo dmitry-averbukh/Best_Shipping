@@ -120,7 +120,12 @@ processBtn.addEventListener('click', async () => {
         results.removeChild(container);
         natashaTotal.textContent = parseInt(natashaTotal.textContent) - totalNatasha;
     };
-
+    /////////////////////////////////////////////////
+    const title = document.createElement('h5');
+    title.className = 'fw-bold mt-3';
+    title.textContent = `Файл: ${file.name}`;
+    
+    container.appendChild(title);
     container.appendChild(table);
     container.appendChild(inputGroup);
     container.appendChild(msg);
