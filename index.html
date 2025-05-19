@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Best Shipping</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <style>
+        .client-block{
+            background:#f8f9fa;padding:1rem;border:1px solid #dee2e6;border-radius:8px;margin-bottom:1.5rem
+        }
+        .grid{display:flex;flex-wrap:wrap;gap:20px}
+        .grid>div{flex:1 1 calc(33.333% - 20px);min-width:300px}
+    </style>
+</head>
+<body class="p-4">
+<div class="container">
+    <h1 class="mb-4">Best Shipping</h1>
+
+    <div class="mb-3">
+        <input type="file" id="fileInput" class="form-control" accept="application/pdf">
+    </div>
+
+    <div class="mb-3 d-flex gap-2">
+        <input type="number" id="fromInput" class="form-control w-25" placeholder="Наклейка з">
+        <input type="number" id="toInput"   class="form-control w-25" placeholder="Наклейка по">
+        <button class="btn btn-primary" id="processBtn">Розрахувати</button>
+    </div>
+
+    <div id="results" class="grid"></div>
+
+    <div class="mt-4">
+        <h5>Загальна сума для Наташі: <span id="totalForNatasha">0</span> грн</h5>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
