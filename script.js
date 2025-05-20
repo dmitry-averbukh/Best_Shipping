@@ -1,3 +1,5 @@
+// ===== С НУЛЯ: ФИНАЛЬНАЯ ВЕРСИЯ script.js (СКЛЕЙКА ТЕКСТА) =====
+
 const processBtn = document.getElementById('processBtn');
 const fileInput = document.getElementById('fileInput');
 const fromInput = document.getElementById('fromInput');
@@ -47,7 +49,6 @@ processBtn.addEventListener('click', async () => {
     const lines = content.items.map(item => item.str.trim()).filter(Boolean);
     const flatText = content.items.map(item => item.str).join('\n');
 
-    // Трек-номер
     let track = 'N/A';
     for (const line of lines) {
       const cleaned = line.replace(/\s+/g, '');
@@ -57,7 +58,6 @@ processBtn.addEventListener('click', async () => {
       }
     }
 
-    // Вага
     let weight = 0;
     const weightRegex = /(\d+\.\d+)\s*kg/i;
     const match = flatText.match(weightRegex);
@@ -87,7 +87,6 @@ processBtn.addEventListener('click', async () => {
     `;
   }
 
-  // === Ввод суми за пошту ===
   const inputGroup = document.createElement('div');
   inputGroup.className = 'mt-2';
   inputGroup.innerHTML = `
@@ -124,7 +123,6 @@ processBtn.addEventListener('click', async () => {
     updateClientSum();
   };
 
-  // === Кнопка видалення ===
   const delBtn = document.createElement('button');
   delBtn.className = 'btn btn-danger btn-sm mt-2 ms-2';
   delBtn.textContent = 'Видалити клієнта';
@@ -135,37 +133,9 @@ processBtn.addEventListener('click', async () => {
     updateNatasha();
   };
 
-  // === Название файла ===
   const title = document.createElement('h5');
   title.className = 'fw-bold mt-3';
   title.textContent = `Файл: ${currentFileName}`;
-
-  // === Подсчёт для Максима ===
-  const smallCount = rows.filter(r => r.weight < 0.25).length;
-  const bigCount = rows.filter(r => r.weight >= 0.25).length;
-  const totalMaxim = smallCount * 10 + bigCount * 25;
-
-  const maximBlock = document.createElement('div');
-  maximBlock.className = 'mt-2';
-
-  const maximText = `Маленьких посилок: ${smallCount} × 10 грн = ${smallCount * 10} грн\n` +
-                    `Великих посилок: ${bigCount} × 25 грн = ${bigCount * 25} грн\n` +
-                    `Усього Максиму: ${totalMaxim} грн`;
-
-  const maximMsg = document.createElement('pre');
-  maximMsg.textContent = maximText;
-
-  const maximBtn = document.createElement('button');
-  maximBtn.className = 'btn btn-outline-primary btn-sm mb-2';
-  maximBtn.textContent = 'Скопіювати Максиму';
-  maximBtn.onclick = () => {
-    navigator.clipboard.writeText(maximText);
-    maximBtn.textContent = 'Скопійовано!';
-    setTimeout(() => maximBtn.textContent = 'Скопіювати Максиму', 1500);
-  };
-
-  maximBlock.appendChild(maximMsg);
-  maximBlock.appendChild(maximBtn);
 
   container.appendChild(title);
   container.appendChild(table);
@@ -173,7 +143,6 @@ processBtn.addEventListener('click', async () => {
   container.appendChild(msg);
   container.appendChild(copyBtn);
   container.appendChild(delBtn);
-  container.appendChild(maximBlock);
   results.appendChild(container);
 
   updateNatasha();
@@ -181,7 +150,6 @@ processBtn.addEventListener('click', async () => {
   updateMaxim();
 });
 
-// === Оновлення сум ===
 function updateNatasha() {
   let total = 0;
   document.querySelectorAll('.client-block').forEach(block => {
@@ -216,4 +184,26 @@ function updateMaxim() {
   });
   const sum = small * 10 + big * 25;
   maximTotal.textContent = sum;
+
+  const text = `Маленьких посилок: ${small} × 10 грн = ${small * 10} грн\n` +
+               `Великих посилок: ${big} × 25 грн = ${big * 25} грн\n` +
+               `Усього Максиму: ${sum} грн`;
+
+  const block = document.getElementById('maximBlock');
+  block.innerHTML = '';
+
+  const pre = document.createElement('pre');
+  pre.textContent = text;
+
+  const btn = document.createElement('button');
+  btn.className = 'btn btn-outline-primary btn-sm mt-2';
+  btn.textContent = 'Скопіювати Максиму';
+  btn.onclick = () => {
+    navigator.clipboard.writeText(text);
+    btn.textContent = 'Скопійовано!';
+    setTimeout(() => btn.textContent = 'Скопіювати Максиму', 1500);
+  };
+
+  block.appendChild(pre);
+  block.appendChild(btn);
 }
