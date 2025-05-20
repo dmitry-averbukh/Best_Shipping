@@ -1,192 +1,219 @@
-// ===== С НУЛЯ: ФИНАЛЬНАЯ ВЕРСИЯ script.js (СКЛЕЙКА ТЕКСТА) =====
-
 const processBtn = document.getElementById('processBtn');
 const fileInput = document.getElementById('fileInput');
 const fromInput = document.getElementById('fromInput');
 const toInput = document.getElementById('toInput');
 const results = document.getElementById('results');
 const natashaTotal = document.getElementById('totalForNatasha');
-const clientTotal = document.getElementById('totalForClients'); // Добавлено
-const maximTotal = document.getElementById('totalForMaxim'); // Добавлено
+const maximTotal = document.getElementById('totalForMaxim');
+const clientTotal = document.getElementById('totalForClient');
 
-let grandTotal = 0; // Общая сумма по клиентам
-let totalSmall = 0; // Маленькие посылки для Максима
-let totalBig = 0; // Большие посылки для Максима
+let currentFileName = '';
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  if (file) currentFileName = file.name;
+});
 
 processBtn.addEventListener('click', async () => {
-    const file = fileInput.files[0];
+  const file = fileInput.files[0];
+  if (!file) return alert('Оберіть PDF-файл');
 
-    let currentFileName = '';
-    fileInput.addEventListener('change', () => {
-      const file = fileInput.files[0];
-      if (file) currentFileName = file.name;
-    });
+  const from = parseInt(fromInput.value) - 1 || 0;
+  const to = parseInt(toInput.value) || Infinity;
 
-    if (!file) return alert('Оберіть PDF-файл');
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
-    const from = parseInt(fromInput.value) - 1 || 0;
-    const to = parseInt(toInput.value) || Infinity;
+  const container = document.createElement('div');
+  container.className = 'client-block';
 
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-
-    const container = document.createElement('div');
-    container.className = 'client-block';
-
-    const table = document.createElement('table');
-    table.className = 'table table-bordered';
-    table.innerHTML = `
+  const table = document.createElement('table');
+  table.className = 'table table-bordered';
+  table.innerHTML = `
     <thead class="table-dark">
       <tr><th>#</th><th>Трек</th><th>Вага (кг)</th><th>Послуги</th><th>Наташі</th></tr>
     </thead><tbody></tbody>
   `;
 
-    let totalService = 0;
-    let totalNatasha = 0;
-    let totalClientSum = 0;
-    let index = 1;
-    const rows = [];
+  let totalService = 0;
+  let totalNatasha = 0;
+  let index = 1;
+  const rows = [];
 
-    for (let i = 0; i < pdf.numPages; i++) {
-        if (i < from || i >= to) continue;
+  for (let i = 0; i < pdf.numPages; i++) {
+    if (i < from || i >= to) continue;
 
-        const page = await pdf.getPage(i + 1);
-        const content = await page.getTextContent();
-        const lines = content.items.map(item => item.str.trim()).filter(Boolean);
-        const flatText = content.items.map(item => item.str).join('\n');
+    const page = await pdf.getPage(i + 1);
+    const content = await page.getTextContent();
+    const lines = content.items.map(item => item.str.trim()).filter(Boolean);
+    const flatText = content.items.map(item => item.str).join('\n');
 
-        let track = 'N/A';
-        for (const line of lines) {
-            const cleaned = line.replace(/\s+/g, '');
-            if (/^[A-Z]{2}\d{9}[A-Z]{2}$/.test(cleaned)) {
-                track = cleaned;
-                break;
-            }
-        }
-
-        let weight = 0;
-        const weightRegex = /(\d+\.\d+)\s*kg/;
-        const match = flatText.match(weightRegex);
-        if (match) {
-            weight = parseFloat(match[1]);
-        } else {
-            console.warn(`⚠️ Вага не знайдена (сторінка ${i + 1})`);
-        }
-
-        const weightG = Math.round(weight * 1000);
-        const service = weightG <= 250 ? 20 : weightG <= 500 ? 150 : weightG <= 1000 ? 200 : 250;
-        const natasha = weightG <= 299 ? 0 : weightG <= 549 ? 50 : weightG <= 1049 ? 100 : 150;
-
-        rows.push({ weight, service });
-
-        table.querySelector('tbody').innerHTML += `
-          <tr>
-            <td>${index++}</td>
-            <td>${track}</td>
-            <td>${weight.toFixed(3)}</td>
-            <td>${service}</td>
-            <td>${natasha}</td>
-          </tr>
-        `;
-
-        totalService += service;
-        totalNatasha += natasha;
+    // Трек-номер
+    let track = 'N/A';
+    for (const line of lines) {
+      const cleaned = line.replace(/\s+/g, '');
+      if (/^[A-Z]{2}\d{9}[A-Z]{2}$/.test(cleaned)) {
+        track = cleaned;
+        break;
+      }
     }
 
-    const inputGroup = document.createElement('div');
-    inputGroup.className = 'mt-2';
-    inputGroup.innerHTML = `
+    // Вага
+    let weight = 0;
+    const weightRegex = /(\d+\.\d+)\s*kg/i;
+    const match = flatText.match(weightRegex);
+    if (match) {
+      weight = parseFloat(match[1]);
+    } else {
+      console.warn(`⚠️ Вага не знайдена (сторінка ${i + 1})`);
+    }
+
+    const weightG = Math.round(weight * 1000);
+    const service = weightG <= 250 ? 20 : weightG <= 500 ? 150 : weightG <= 1000 ? 200 : 250;
+    const natasha = weightG <= 299 ? 0 : weightG <= 549 ? 50 : weightG <= 1049 ? 100 : 150;
+
+    totalService += service;
+    totalNatasha += natasha;
+
+    rows.push({ track, weight, service, natasha });
+
+    table.querySelector('tbody').innerHTML += `
+      <tr>
+        <td>${index++}</td>
+        <td>${track}</td>
+        <td>${weight.toFixed(3)}</td>
+        <td>${service}</td>
+        <td>${natasha}</td>
+      </tr>
+    `;
+  }
+
+  // === Ввод суми за пошту ===
+  const inputGroup = document.createElement('div');
+  inputGroup.className = 'mt-2';
+  inputGroup.innerHTML = `
     <label class="form-label fw-bold">Сума за пошту (грн):</label>
     <input type="number" class="form-control w-50" required>
   `;
-    const postInput = inputGroup.querySelector('input');
+  const postInput = inputGroup.querySelector('input');
 
-    const msg = document.createElement('pre');
-    msg.className = 'bg-light p-2 mt-2';
+  const msg = document.createElement('pre');
+  msg.className = 'bg-light p-2 mt-2';
 
-    const updateMsg = () => {
-        const post = parseFloat(postInput.value);
-        const total = isNaN(post) ? '—' : post + totalService;
-        msg.textContent = `За пошту: ${isNaN(post) ? '—' : post} грн\n` +
-            `За послуги: ${totalService} грн\n` +
-            `Всього: ${total} грн`;
-        if (!isNaN(post)) {
-            grandTotal += post + totalService;
-            clientTotal.textContent = grandTotal;
-        }
-    };
-    postInput.addEventListener('input', updateMsg);
-    updateMsg();
+  const updateMsg = () => {
+    const post = parseFloat(postInput.value);
+    msg.textContent = `За пошту: ${isNaN(post) ? '—' : post} грн\n` +
+                      `За послуги: ${totalService} грн\n` +
+                      `Всього: ${isNaN(post) ? '—' : post + totalService} грн`;
+  };
 
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'btn btn-outline-primary btn-sm mt-2';
-    copyBtn.textContent = 'Скопіювати повідомлення';
-    copyBtn.onclick = () => {
-        if (postInput.value === '') {
-            postInput.classList.add('is-invalid');
-            postInput.focus();
-            return;
-        }
-        navigator.clipboard.writeText(msg.textContent);
-        copyBtn.textContent = 'Скопійовано!';
-        setTimeout(() => copyBtn.textContent = 'Скопіювати повідомлення', 1500);
-    };
+  postInput.addEventListener('input', updateMsg);
+  updateMsg();
 
-    // === Подсчёт для Максима ===
-    let smallCount = 0;
-    let bigCount = 0;
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'btn btn-outline-primary btn-sm mt-2';
+  copyBtn.textContent = 'Скопіювати повідомлення';
+  copyBtn.onclick = () => {
+    if (postInput.value === '') {
+      postInput.classList.add('is-invalid');
+      postInput.focus();
+      return;
+    }
+    navigator.clipboard.writeText(msg.textContent);
+    copyBtn.textContent = 'Скопійовано!';
+    setTimeout(() => copyBtn.textContent = 'Скопіювати повідомлення', 1500);
+    updateClientSum();
+  };
 
-    rows.forEach(row => {
-        if (row.weight < 0.25) smallCount++;
-        else bigCount++;
-    });
+  // === Кнопка видалення ===
+  const delBtn = document.createElement('button');
+  delBtn.className = 'btn btn-danger btn-sm mt-2 ms-2';
+  delBtn.textContent = 'Видалити клієнта';
+  delBtn.onclick = () => {
+    results.removeChild(container);
+    updateClientSum();
+    updateMaxim();
+    updateNatasha();
+  };
 
-    const totalMaxim = (smallCount * 10) + (bigCount * 25);
-    totalSmall += smallCount;
-    totalBig += bigCount;
-    maximTotal.textContent = (totalSmall * 10 + totalBig * 25);
+  // === Название файла ===
+  const title = document.createElement('h5');
+  title.className = 'fw-bold mt-3';
+  title.textContent = `Файл: ${currentFileName}`;
 
-    const maximBlock = document.createElement('div');
-    maximBlock.className = 'mt-2';
-    const maximText = `Маленьких посилок: ${smallCount} × 10 грн = ${smallCount * 10} грн\nВеликих посилок: ${bigCount} × 25 грн = ${bigCount * 25} грн\nУсього Максиму: ${totalMaxim} грн`;
+  // === Подсчёт для Максима ===
+  const smallCount = rows.filter(r => r.weight < 0.25).length;
+  const bigCount = rows.filter(r => r.weight >= 0.25).length;
+  const totalMaxim = smallCount * 10 + bigCount * 25;
 
-    const maximMsg = document.createElement('pre');
-    maximMsg.textContent = maximText;
+  const maximBlock = document.createElement('div');
+  maximBlock.className = 'mt-2';
 
-    const maximBtn = document.createElement('button');
-    maximBtn.className = 'btn btn-outline-primary btn-sm mb-2';
-    maximBtn.textContent = 'Скопіювати Максиму';
-    maximBtn.onclick = () => {
-        navigator.clipboard.writeText(maximText);
-        maximBtn.textContent = 'Скопійовано!';
-        setTimeout(() => maximBtn.textContent = 'Скопіювати Максиму', 1500);
-    };
+  const maximText = `Маленьких посилок: ${smallCount} × 10 грн = ${smallCount * 10} грн\n` +
+                    `Великих посилок: ${bigCount} × 25 грн = ${bigCount * 25} грн\n` +
+                    `Усього Максиму: ${totalMaxim} грн`;
 
-    maximBlock.appendChild(maximMsg);
-    maximBlock.appendChild(maximBtn);
+  const maximMsg = document.createElement('pre');
+  maximMsg.textContent = maximText;
 
-    const delBtn = document.createElement('button');
-    delBtn.className = 'btn btn-danger btn-sm mt-2 ms-2';
-    delBtn.textContent = 'Видалити клієнта';
-    delBtn.onclick = () => {
-        results.removeChild(container);
-        natashaTotal.textContent = parseInt(natashaTotal.textContent) - totalNatasha;
-        clientTotal.textContent = grandTotal -= totalService + parseFloat(postInput.value);
-        maximTotal.textContent = (totalSmall -= smallCount) * 10 + (totalBig -= bigCount) * 25;
-    };
+  const maximBtn = document.createElement('button');
+  maximBtn.className = 'btn btn-outline-primary btn-sm mb-2';
+  maximBtn.textContent = 'Скопіювати Максиму';
+  maximBtn.onclick = () => {
+    navigator.clipboard.writeText(maximText);
+    maximBtn.textContent = 'Скопійовано!';
+    setTimeout(() => maximBtn.textContent = 'Скопіювати Максиму', 1500);
+  };
 
-    const title = document.createElement('h5');
-    title.className = 'fw-bold mt-3';
-    title.textContent = `Файл: ${currentFileName}`;
+  maximBlock.appendChild(maximMsg);
+  maximBlock.appendChild(maximBtn);
 
-    container.appendChild(title);
-    container.appendChild(table);
-    container.appendChild(inputGroup);
-    container.appendChild(msg);
-    container.appendChild(copyBtn);
-    container.appendChild(maximBlock);
-    container.appendChild(delBtn);
-    results.appendChild(container);
+  container.appendChild(title);
+  container.appendChild(table);
+  container.appendChild(inputGroup);
+  container.appendChild(msg);
+  container.appendChild(copyBtn);
+  container.appendChild(delBtn);
+  container.appendChild(maximBlock);
+  results.appendChild(container);
 
-    natashaTotal.textContent = parseInt(natashaTotal.textContent) + totalNatasha;
+  updateNatasha();
+  updateClientSum();
+  updateMaxim();
 });
+
+// === Оновлення сум ===
+function updateNatasha() {
+  let total = 0;
+  document.querySelectorAll('.client-block').forEach(block => {
+    const cells = block.querySelectorAll('table tbody tr td:last-child');
+    cells.forEach(cell => total += parseInt(cell.textContent));
+  });
+  natashaTotal.textContent = total;
+}
+
+function updateClientSum() {
+  let total = 0;
+  document.querySelectorAll('.client-block').forEach(block => {
+    const input = block.querySelector('input');
+    const post = parseFloat(input?.value);
+    const cells = block.querySelectorAll('table tbody tr td:nth-child(4)');
+    let service = 0;
+    cells.forEach(c => service += parseInt(c.textContent));
+    if (!isNaN(post)) total += post + service;
+  });
+  clientTotal.textContent = total;
+}
+
+function updateMaxim() {
+  let small = 0, big = 0;
+  document.querySelectorAll('.client-block').forEach(block => {
+    const rows = block.querySelectorAll('table tbody tr');
+    rows.forEach(row => {
+      const weight = parseFloat(row.children[2].textContent);
+      if (weight < 0.25) small++;
+      else big++;
+    });
+  });
+  const sum = small * 10 + big * 25;
+  maximTotal.textContent = sum;
+}
