@@ -1,4 +1,4 @@
-// ===== С НУЛЯ: ФИНАЛЬНАЯ ВЕРСИЯ script.js (СКЛЕЙКА ТЕКСТА) =====
+// ===== ФИНАЛЬНАЯ ВЕРСИЯ script.js (суммы, клиент, Максим, исправлено) =====
 
 const processBtn = document.getElementById('processBtn');
 const fileInput = document.getElementById('fileInput');
@@ -6,19 +6,20 @@ const fromInput = document.getElementById('fromInput');
 const toInput = document.getElementById('toInput');
 const results = document.getElementById('results');
 const natashaTotal = document.getElementById('totalForNatasha');
-const maximTotal = document.getElementById('totalForMaxim');
 const clientTotal = document.getElementById('totalForClient');
+const maximTotal = document.getElementById('totalForMaxim');
+const maximBlock = document.getElementById('maximBlock');
 
-let currentFileName = '';
-fileInput.addEventListener('change', () => {
-  const file = fileInput.files[0];
-  if (file) currentFileName = file.name;
-});
+let totalSmall = 0;
+let totalBig = 0;
+let totalMaximSum = 0;
+let totalClientSum = 0;
 
 processBtn.addEventListener('click', async () => {
   const file = fileInput.files[0];
   if (!file) return alert('Оберіть PDF-файл');
 
+  const fileName = file.name;
   const from = parseInt(fromInput.value) - 1 || 0;
   const to = parseInt(toInput.value) || Infinity;
 
@@ -59,22 +60,13 @@ processBtn.addEventListener('click', async () => {
     }
 
     let weight = 0;
-    const weightRegex = /(\d+\.\d+)\s*kg/i;
+    const weightRegex = /(\d+\.\d+)\s*kg/;
     const match = flatText.match(weightRegex);
-    if (match) {
-      weight = parseFloat(match[1]);
-    } else {
-      console.warn(`⚠️ Вага не знайдена (сторінка ${i + 1})`);
-    }
+    if (match) weight = parseFloat(match[1]);
 
     const weightG = Math.round(weight * 1000);
     const service = weightG <= 250 ? 20 : weightG <= 500 ? 150 : weightG <= 1000 ? 200 : 250;
     const natasha = weightG <= 299 ? 0 : weightG <= 549 ? 50 : weightG <= 1049 ? 100 : 150;
-
-    totalService += service;
-    totalNatasha += natasha;
-
-    rows.push({ track, weight, service, natasha });
 
     table.querySelector('tbody').innerHTML += `
       <tr>
@@ -85,6 +77,14 @@ processBtn.addEventListener('click', async () => {
         <td>${natasha}</td>
       </tr>
     `;
+
+    totalService += service;
+    totalNatasha += natasha;
+
+    if (weight <= 0.25) totalSmall++;
+    else totalBig++;
+
+    rows.push({ weight, service });
   }
 
   const inputGroup = document.createElement('div');
@@ -100,9 +100,15 @@ processBtn.addEventListener('click', async () => {
 
   const updateMsg = () => {
     const post = parseFloat(postInput.value);
+    const total = isNaN(post) ? 0 : post + totalService;
     msg.textContent = `За пошту: ${isNaN(post) ? '—' : post} грн\n` +
                       `За послуги: ${totalService} грн\n` +
-                      `Всього: ${isNaN(post) ? '—' : post + totalService} грн`;
+                      `Всього: ${isNaN(post) ? '—' : total} грн`;
+
+    if (!isNaN(post)) {
+      totalClientSum += total;
+      clientTotal.textContent = totalClientSum;
+    }
   };
 
   postInput.addEventListener('input', updateMsg);
@@ -120,7 +126,6 @@ processBtn.addEventListener('click', async () => {
     navigator.clipboard.writeText(msg.textContent);
     copyBtn.textContent = 'Скопійовано!';
     setTimeout(() => copyBtn.textContent = 'Скопіювати повідомлення', 1500);
-    updateClientSum();
   };
 
   const delBtn = document.createElement('button');
@@ -128,14 +133,14 @@ processBtn.addEventListener('click', async () => {
   delBtn.textContent = 'Видалити клієнта';
   delBtn.onclick = () => {
     results.removeChild(container);
-    updateClientSum();
-    updateMaxim();
-    updateNatasha();
+    natashaTotal.textContent = parseInt(natashaTotal.textContent) - totalNatasha;
+    maximTotal.textContent = parseInt(maximTotal.textContent) - totalMaximSum;
+    clientTotal.textContent = parseInt(clientTotal.textContent) - parseFloat(postInput.value || 0) - totalService;
   };
 
   const title = document.createElement('h5');
   title.className = 'fw-bold mt-3';
-  title.textContent = `Файл: ${currentFileName}`;
+  title.textContent = `Файл: ${fileName}`;
 
   container.appendChild(title);
   container.appendChild(table);
@@ -145,65 +150,29 @@ processBtn.addEventListener('click', async () => {
   container.appendChild(delBtn);
   results.appendChild(container);
 
-  updateNatasha();
-  updateClientSum();
-  updateMaxim();
-});
+  natashaTotal.textContent = parseInt(natashaTotal.textContent) + totalNatasha;
 
-function updateNatasha() {
-  let total = 0;
-  document.querySelectorAll('.client-block').forEach(block => {
-    const cells = block.querySelectorAll('table tbody tr td:last-child');
-    cells.forEach(cell => total += parseInt(cell.textContent));
-  });
-  natashaTotal.textContent = total;
-}
+  // === Обновление блока для Максима ===
+  totalMaximSum = (totalSmall * 10) + (totalBig * 25);
+  maximTotal.textContent = totalMaximSum;
 
-function updateClientSum() {
-  let total = 0;
-  document.querySelectorAll('.client-block').forEach(block => {
-    const input = block.querySelector('input');
-    const post = parseFloat(input?.value);
-    const cells = block.querySelectorAll('table tbody tr td:nth-child(4)');
-    let service = 0;
-    cells.forEach(c => service += parseInt(c.textContent));
-    if (!isNaN(post)) total += post + service;
-  });
-  clientTotal.textContent = total;
-}
+  const maximText = `Маленьких посилок: ${totalSmall} × 10 грн = ${totalSmall * 10} грн\n` +
+                    `Великих посилок: ${totalBig} × 25 грн = ${totalBig * 25} грн\n` +
+                    `Усього Максиму: ${totalMaximSum} грн`;
 
-function updateMaxim() {
-  let small = 0, big = 0;
-  document.querySelectorAll('.client-block').forEach(block => {
-    const rows = block.querySelectorAll('table tbody tr');
-    rows.forEach(row => {
-      const weight = parseFloat(row.children[2].textContent);
-      if (weight < 0.25) small++;
-      else big++;
-    });
-  });
-  const sum = small * 10 + big * 25;
-  maximTotal.textContent = sum;
+  maximBlock.innerHTML = '';
+  const maximMsg = document.createElement('pre');
+  maximMsg.textContent = maximText;
 
-  const text = `Маленьких посилок: ${small} × 10 грн = ${small * 10} грн\n` +
-               `Великих посилок: ${big} × 25 грн = ${big * 25} грн\n` +
-               `Усього Максиму: ${sum} грн`;
-
-  const block = document.getElementById('maximBlock');
-  block.innerHTML = '';
-
-  const pre = document.createElement('pre');
-  pre.textContent = text;
-
-  const btn = document.createElement('button');
-  btn.className = 'btn btn-outline-primary btn-sm mt-2';
-  btn.textContent = 'Скопіювати Максиму';
-  btn.onclick = () => {
-    navigator.clipboard.writeText(text);
-    btn.textContent = 'Скопійовано!';
-    setTimeout(() => btn.textContent = 'Скопіювати Максиму', 1500);
+  const maximBtn = document.createElement('button');
+  maximBtn.className = 'btn btn-outline-primary btn-sm mt-2';
+  maximBtn.textContent = 'Скопіювати Максиму';
+  maximBtn.onclick = () => {
+    navigator.clipboard.writeText(maximText);
+    maximBtn.textContent = 'Скопійовано!';
+    setTimeout(() => maximBtn.textContent = 'Скопіювати Максиму', 1500);
   };
 
-  block.appendChild(pre);
-  block.appendChild(btn);
-}
+  maximBlock.appendChild(maximMsg);
+  maximBlock.appendChild(maximBtn);
+});
