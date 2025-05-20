@@ -1,4 +1,4 @@
-// ===== С НУЛЯ: ФИНАЛЬНАЯ ВЕРСИЯ script.js =====
+// ===== С НУЛЯ: ФИНАЛЬНАЯ ВЕРСИЯ script.js (СКЛЕЙКА ТЕКСТА) =====
 
 const processBtn = document.getElementById('processBtn');
 const fileInput = document.getElementById('fileInput');
@@ -6,14 +6,14 @@ const fromInput = document.getElementById('fromInput');
 const toInput = document.getElementById('toInput');
 const results = document.getElementById('results');
 const natashaTotal = document.getElementById('totalForNatasha');
-const clientTotal = document.getElementById('totalForClient');
 const maximTotal = document.getElementById('totalForMaxim');
+const clientTotal = document.getElementById('totalForClient');
 const maximBlock = document.getElementById('maximBlock');
 
-let finalClientSum = 0;
-let finalMaximSum = 0;
-let finalSmall = 0;
-let finalBig = 0;
+let totalClientSum = 0;
+let totalMaximSum = 0;
+let smallGlobal = 0;
+let bigGlobal = 0;
 
 processBtn.addEventListener('click', async () => {
   const file = fileInput.files[0];
@@ -36,12 +36,11 @@ processBtn.addEventListener('click', async () => {
     </thead><tbody></tbody>
   `;
 
+  const tbody = table.querySelector('tbody');
+  let index = 1;
   let totalService = 0;
   let totalNatasha = 0;
-  let totalClient = 0;
-  let small = 0;
-  let big = 0;
-  let index = 1;
+  let rows = [];
 
   for (let i = 0; i < pdf.numPages; i++) {
     if (i < from || i >= to) continue;
@@ -63,14 +62,20 @@ processBtn.addEventListener('click', async () => {
     let weight = 0;
     const weightRegex = /(\d+\.\d+)\s*kg/;
     const match = flatText.match(weightRegex);
-    if (match) weight = parseFloat(match[1]);
-    else console.warn(`⚠️ Вага не знайдена (сторінка ${i + 1})`);
+    if (match) {
+      weight = parseFloat(match[1]);
+    }
 
     const weightG = Math.round(weight * 1000);
     const service = weightG <= 250 ? 20 : weightG <= 500 ? 150 : weightG <= 1000 ? 200 : 250;
     const natasha = weightG <= 299 ? 0 : weightG <= 549 ? 50 : weightG <= 1049 ? 100 : 150;
 
-    table.querySelector('tbody').innerHTML += `
+    rows.push({ weight, service });
+
+    totalService += service;
+    totalNatasha += natasha;
+
+    tbody.innerHTML += `
       <tr>
         <td>${index++}</td>
         <td>${track}</td>
@@ -79,13 +84,9 @@ processBtn.addEventListener('click', async () => {
         <td>${natasha}</td>
       </tr>
     `;
-
-    totalService += service;
-    totalNatasha += natasha;
-
-    if (weight < 0.25) small++;
-    else big++;
   }
+
+  natashaTotal.textContent = parseInt(natashaTotal.textContent) + totalNatasha;
 
   const inputGroup = document.createElement('div');
   inputGroup.className = 'mt-2';
@@ -100,14 +101,18 @@ processBtn.addEventListener('click', async () => {
 
   const updateMsg = () => {
     const post = parseFloat(postInput.value);
-    const sum = isNaN(post) ? 0 : post + totalService;
+    const total = isNaN(post) ? 0 : post + totalService;
     msg.textContent = `За пошту: ${isNaN(post) ? '—' : post} грн\n` +
-      `За послуги: ${totalService} грн\n` +
-      `Всього: ${isNaN(post) ? '—' : sum} грн`;
+                      `За послуги: ${totalService} грн\n` +
+                      `Всього: ${isNaN(post) ? '—' : total} грн`;
 
-    totalClient = sum;
-    finalClientSum += sum;
-    clientTotal.textContent = finalClientSum;
+    const prev = container.dataset.clientSum ? parseFloat(container.dataset.clientSum) : 0;
+    totalClientSum -= prev;
+    if (!isNaN(total)) {
+      totalClientSum += total;
+      container.dataset.clientSum = total;
+    }
+    clientTotal.textContent = totalClientSum;
   };
 
   postInput.addEventListener('input', updateMsg);
@@ -133,18 +138,23 @@ processBtn.addEventListener('click', async () => {
   delBtn.onclick = () => {
     results.removeChild(container);
     natashaTotal.textContent = parseInt(natashaTotal.textContent) - totalNatasha;
-    clientTotal.textContent = finalClientSum -= totalClient;
-    maximTotal.textContent = finalMaximSum -= totalMaxim;
-    finalSmall -= small;
-    finalBig -= big;
-    updateMaxim();
+    const removed = parseFloat(container.dataset.clientSum) || 0;
+    totalClientSum -= removed;
+    clientTotal.textContent = totalClientSum;
+
+    totalMaximSum -= parseInt(container.dataset.maximSum || 0);
+    maximTotal.textContent = totalMaximSum;
+
+    smallGlobal -= parseInt(container.dataset.small || 0);
+    bigGlobal -= parseInt(container.dataset.big || 0);
+    updateMaximBlock();
   };
 
-  const title = document.createElement('h5');
-  title.className = 'fw-bold mt-3';
-  title.textContent = `Файл: ${file.name}`;
+  container.dataset.clientSum = 0;
+  container.dataset.maximSum = 0;
+  container.dataset.small = 0;
+  container.dataset.big = 0;
 
-  container.appendChild(title);
   container.appendChild(table);
   container.appendChild(inputGroup);
   container.appendChild(msg);
@@ -152,23 +162,33 @@ processBtn.addEventListener('click', async () => {
   container.appendChild(delBtn);
   results.appendChild(container);
 
-  natashaTotal.textContent = parseInt(natashaTotal.textContent) + totalNatasha;
+  // Максим ===
+  let small = 0, big = 0;
+  for (const r of rows) {
+    if (r.weight < 0.25) small++;
+    else big++;
+  }
+  const totalMaxim = small * 10 + big * 25;
+  totalMaximSum += totalMaxim;
+  maximTotal.textContent = totalMaximSum;
 
-  const totalMaxim = (small * 10 + big * 25);
-  finalSmall += small;
-  finalBig += big;
-  finalMaximSum += totalMaxim;
-  maximTotal.textContent = finalMaximSum;
+  smallGlobal += small;
+  bigGlobal += big;
 
-  updateMaxim();
+  container.dataset.maximSum = totalMaxim;
+  container.dataset.small = small;
+  container.dataset.big = big;
+
+  updateMaximBlock();
 });
 
-function updateMaxim() {
-  const text = `Маленьких посилок: ${finalSmall} × 10 грн = ${finalSmall * 10} грн\n` +
-    `Великих посилок: ${finalBig} × 25 грн = ${finalBig * 25} грн\n` +
-    `Усього Максиму: ${finalMaximSum} грн`;
-
+function updateMaximBlock() {
   maximBlock.innerHTML = '';
+  const total = smallGlobal * 10 + bigGlobal * 25;
+  const text = `Маленьких посилок: ${smallGlobal} × 10 грн = ${smallGlobal * 10} грн\n` +
+               `Великих посилок: ${bigGlobal} × 25 грн = ${bigGlobal * 25} грн\n` +
+               `Усього Максиму: ${total} грн`;
+
   const msg = document.createElement('pre');
   msg.textContent = text;
 
