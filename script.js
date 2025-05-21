@@ -165,7 +165,7 @@ processBtn.addEventListener('click', async () => {
   // Максим ===
   let small = 0, big = 0;
   for (const r of rows) {
-    if (r.weight < 0.25) small++;
+    if (r.weight <= 0.25) small++;
     else big++;
   }
   const totalMaxim = small * 10 + big * 25;
